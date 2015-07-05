@@ -3,23 +3,23 @@
 %% We'll spawn multiple processes for each ping'er, and one process for a pong'er.
 
 -module(concurrency2).
--export([spawn_ping_pong/1,pong/1,ping_single/2]).
+-export([spawn_ping_pong/1,pong/1,ping_single/1]).
 
 %% Spawn a pong'er and spawn the given number of ping'ers
 
 spawn_ping_pong(Number_of_Pings) when Number_of_Pings >= 0 ->
-    Pong_ID = spawn(concurrency2, pong, [Number_of_Pings]),
-    ping_multiple(Number_of_Pings, Pong_ID).
+    register(pong, spawn(concurrency2, pong, [Number_of_Pings])),
+    ping_multiple(Number_of_Pings).
 
 %% Ping'ers
 %% Spawn the given number of pings.
 
-ping_multiple(Number_of_Pings, Pong_ID) ->
-    Spawn_Ping_Single = fun (Number) -> spawn(concurrency2, ping_single, [Number, Pong_ID]) end,
+ping_multiple(Number_of_Pings) ->
+    Spawn_Ping_Single = fun (Number) -> spawn(concurrency2, ping_single, [Number]) end,
     lists:foreach(Spawn_Ping_Single, lists:seq(1, Number_of_Pings)).
 
-ping_single(Ping_Number, Pong_ID) ->
-    Pong_ID ! {ping, Ping_Number, self()},
+ping_single(Ping_Number) ->
+    pong ! {ping, Ping_Number, self()},
     receive
         {pong, Pong_Number} ->
             io:format("Ping ~w: Received pong ~w~n", [Ping_Number, Pong_Number])
